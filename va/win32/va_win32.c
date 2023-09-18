@@ -1,6 +1,5 @@
 /*
  * Copyright © Microsoft Corporation
- * Copyright (c) 2023 Emil Velikov
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -132,28 +131,47 @@ static void va_DisplayContextDestroy(
     free(pDisplayContext);
 }
 
-static VAStatus va_DisplayContextGetDriverNames(
+static VAStatus va_DisplayContextGetNumCandidates(
     VADisplayContextP pDisplayContext,
-    char **drivers,
-    unsigned *num_drivers
+    int *num_candidates
 )
 {
-    const LUID * const adapter = pDisplayContext->pDriverContext->native_dpy;
-    const VADisplayContextWin32 * const pWin32Ctx = pDisplayContext->opaque;
-    unsigned count = 0;
+    /*  Always report the default driver name
+        If available, also add the adapter specific registered driver */
+    LUID* adapter = pDisplayContext->pDriverContext->native_dpy;
+    VADisplayContextWin32* pWin32Ctx = (VADisplayContextWin32*) pDisplayContext->opaque;
+    if (adapter && pWin32Ctx->registry_driver_available_flag)
+        *num_candidates = 2;
+    else
+        *num_candidates = 1;
 
-    /* Always prefer the adapter registered driver name as first option */
+    return VA_STATUS_SUCCESS;
+}
+
+static VAStatus va_DisplayContextGetDriverNameByIndex(
+    VADisplayContextP pDisplayContext,
+    char **driver_name,
+    int candidate_index
+)
+{
+    LUID* adapter = pDisplayContext->pDriverContext->native_dpy;
+    VADisplayContextWin32* pWin32Ctx = (VADisplayContextWin32*) pDisplayContext->opaque;
     if (adapter && pWin32Ctx->registry_driver_available_flag) {
-        drivers[count] = _strdup(pWin32Ctx->registry_driver_name);
-        count++;
+        /* Always prefer the adapter registered driver name as first option */
+        if (candidate_index == 0) {
+            *driver_name = calloc(sizeof(pWin32Ctx->registry_driver_name), sizeof(char));
+            memcpy(*driver_name, pWin32Ctx->registry_driver_name, sizeof(pWin32Ctx->registry_driver_name));
+        }
+        /* Provide the default driver name as a fallback option */
+        else if (candidate_index == 1) {
+            *driver_name = calloc(sizeof(VAAPI_DEFAULT_DRIVER_NAME), sizeof(char));
+            memcpy(*driver_name, VAAPI_DEFAULT_DRIVER_NAME, sizeof(VAAPI_DEFAULT_DRIVER_NAME));
+        }
+    } else {
+        /* Provide the default driver name as a fallback option */
+        *driver_name = calloc(sizeof(VAAPI_DEFAULT_DRIVER_NAME), sizeof(char));
+        memcpy(*driver_name, VAAPI_DEFAULT_DRIVER_NAME, sizeof(VAAPI_DEFAULT_DRIVER_NAME));
     }
-    /* Provide the default driver name as a fallback option */
-    if (*num_drivers > count) {
-        drivers[count] = _strdup(VAAPI_DEFAULT_DRIVER_NAME);
-        count++;
-    }
-
-    *num_drivers = count;
 
     return VA_STATUS_SUCCESS;
 }
@@ -171,7 +189,8 @@ VADisplay vaGetDisplayWin32(
         return NULL;
 
     pDisplayContext->vaDestroy       = va_DisplayContextDestroy;
-    pDisplayContext->vaGetDriverNames = va_DisplayContextGetDriverNames;
+    pDisplayContext->vaGetDriverNameByIndex = va_DisplayContextGetDriverNameByIndex;
+    pDisplayContext->vaGetNumCandidates = va_DisplayContextGetNumCandidates;
     pDisplayContext->opaque = calloc(1, sizeof(VADisplayContextWin32));
     if (!pDisplayContext->opaque) {
         va_DisplayContextDestroy(pDisplayContext);
@@ -185,13 +204,11 @@ VADisplay vaGetDisplayWin32(
 
         /* Load the preferred driver name from the driver registry if available */
         LoadDriverNameFromRegistry(pWin32Ctx);
-#ifdef _DEBUG
         if (pWin32Ctx->registry_driver_available_flag) {
             fprintf(stderr, "VA_Win32: Found driver %s in the registry for LUID %ld %ld \n", pWin32Ctx->registry_driver_name, pWin32Ctx->adapter_luid.LowPart, pWin32Ctx->adapter_luid.HighPart);
         } else {
             fprintf(stderr, "VA_Win32: Couldn't find a driver in the registry for LUID %ld %ld. Using default driver: %s \n", pWin32Ctx->adapter_luid.LowPart, pWin32Ctx->adapter_luid.HighPart, VAAPI_DEFAULT_DRIVER_NAME);
         }
-#endif // _DEBUG
     }
 
     pDriverContext = va_newDriverContext(pDisplayContext);

@@ -30,10 +30,10 @@
 #include "va_backend.h"
 
 DLL_HIDDEN
-VAStatus va_NVCTRL_GetDriverNames(
+VAStatus va_NVCTRL_GetDriverName(
     VADisplayContextP pDisplayContext,
-    char **drivers,
-    unsigned *num_drivers
+    char **driver_name,
+    int candidate_index
 );
 
 #endif

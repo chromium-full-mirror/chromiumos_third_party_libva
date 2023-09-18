@@ -1,6 +1,5 @@
 /*
  * Copyright (c) 2007 Intel Corporation. All Rights Reserved.
- * Copyright (c) 2023 Emil Velikov
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the
@@ -62,37 +61,37 @@ static void va_DisplayContextDestroy(
     free(pDisplayContext);
 }
 
-static VAStatus va_DisplayContextConnect(
-    VADisplayContextP pDisplayContext
+static VAStatus va_DisplayContextGetNumCandidates(
+    VADisplayContextP pDisplayContext,
+    int *num_candidates
 )
 {
     VADriverContextP const ctx = pDisplayContext->pDriverContext;
-    struct drm_state * const drm_state = (struct drm_state *)ctx->drm_state;
+    struct drm_state * drm_state = (struct drm_state *)ctx->drm_state;
 
+    memset(drm_state, 0, sizeof(*drm_state));
     drm_state->fd = open(DEVICE_NAME, O_RDWR | O_CLOEXEC);
+
     if (drm_state->fd < 0) {
         fprintf(stderr, "Cannot open DRM device '%s': %d, %s\n",
                 DEVICE_NAME, errno, strerror(errno));
         return VA_STATUS_ERROR_UNKNOWN;
     }
     drm_state->auth_type = VA_DRM_AUTH_CUSTOM;
-    return VA_STATUS_SUCCESS;
+    return VA_DRM_GetNumCandidates(ctx, num_candidates);
 }
 
-static VAStatus
-va_DisplayContextGetDriverNames(
+static VAStatus va_DisplayContextGetDriverNameByIndex(
     VADisplayContextP pDisplayContext,
-    char            **drivers,
-    unsigned         *num_drivers
+    char **driver_name,
+    int candidate_index
 )
 {
     VADriverContextP const ctx = pDisplayContext->pDriverContext;
-    VAStatus status = va_DisplayContextConnect(pDisplayContext);
-    if (status != VA_STATUS_SUCCESS)
-        return status;
 
-    return VA_DRM_GetDriverNames(ctx, drivers, num_drivers);
+    return VA_DRM_GetDriverName(ctx, driver_name, candidate_index);
 }
+
 
 VADisplay vaGetDisplay(
     void *native_dpy /* implementation specific */
@@ -110,7 +109,8 @@ VADisplay vaGetDisplay(
         return NULL;
 
     pDisplayContext->vaDestroy       = va_DisplayContextDestroy;
-    pDisplayContext->vaGetDriverNames = va_DisplayContextGetDriverNames;
+    pDisplayContext->vaGetDriverNameByIndex = va_DisplayContextGetDriverNameByIndex;
+    pDisplayContext->vaGetNumCandidates = va_DisplayContextGetNumCandidates;
 
     pDriverContext = va_newDriverContext(pDisplayContext);
     if (!pDriverContext) {

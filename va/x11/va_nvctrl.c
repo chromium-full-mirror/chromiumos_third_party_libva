@@ -362,9 +362,17 @@ static Bool VA_NVCTRLQueryDirectRenderingCapable(Display *dpy, int screen,
 }
 
 static Bool VA_NVCTRLGetClientDriverName(Display *dpy, int screen,
-        char **clientDriverName)
+        int *ddxDriverMajorVersion, int *ddxDriverMinorVersion,
+        int *ddxDriverPatchVersion, char **clientDriverName)
 {
-    int ddxDriverMajorVersion, ddxDriverMinorVersion, ddxDriverPatchVersion;
+    if (ddxDriverMajorVersion)
+        *ddxDriverMajorVersion = 0;
+    if (ddxDriverMinorVersion)
+        *ddxDriverMinorVersion = 0;
+    if (ddxDriverPatchVersion)
+        *ddxDriverPatchVersion = 0;
+    if (clientDriverName)
+        *clientDriverName = NULL;
 
     char *nvidia_driver_version = NULL;
     if (!XNVCTRLQueryStringAttribute(dpy, screen, 0, NV_CTRL_STRING_NVIDIA_DRIVER_VERSION, &nvidia_driver_version))
@@ -373,48 +381,55 @@ static Bool VA_NVCTRLGetClientDriverName(Display *dpy, int screen,
     char *end, *str = nvidia_driver_version;
     unsigned long v = strtoul(str, &end, 10);
     if (end && end != str) {
-        ddxDriverMajorVersion = v;
+        if (ddxDriverMajorVersion)
+            *ddxDriverMajorVersion = v;
         if (*(str = end) == '.') {
             v = strtoul(str + 1, &end, 10);
             if (end && end != str && (*end == '.' || *end == '\0')) {
-                ddxDriverMinorVersion = v;
+                if (ddxDriverMinorVersion)
+                    *ddxDriverMinorVersion = v;
                 if (*(str = end) == '.') {
                     v = strtoul(str + 1, &end, 10);
                     if (end && end != str && *end == '\0') {
-                        ddxDriverPatchVersion = v;
+                        if (ddxDriverPatchVersion)
+                            *ddxDriverPatchVersion = v;
                     }
                 }
             }
         }
     }
     Xfree(nvidia_driver_version);
-    (void) ddxDriverMajorVersion;
-    (void) ddxDriverMinorVersion;
-    (void) ddxDriverPatchVersion;
 
-    *clientDriverName = strdup("nvidia");
+    if (clientDriverName)
+        *clientDriverName = strdup("nvidia");
 
     return True;
 }
 
-VAStatus va_NVCTRL_GetDriverNames(
+VAStatus va_NVCTRL_GetDriverName(
     VADisplayContextP pDisplayContext,
-    char **drivers,
-    unsigned *num_drivers
+    char **driver_name,
+    int candidate_index
 )
 {
     VADriverContextP ctx = pDisplayContext->pDriverContext;
-    int direct_capable;
+    int direct_capable, driver_major, driver_minor, driver_patch;
+    Bool result;
 
-    if (!VA_NVCTRLQueryDirectRenderingCapable(ctx->native_dpy, ctx->x11_screen,
-            &direct_capable) || !direct_capable)
+    if (candidate_index != 0)
+        return VA_STATUS_ERROR_INVALID_PARAMETER;
+
+    result = VA_NVCTRLQueryDirectRenderingCapable(ctx->native_dpy, ctx->x11_screen,
+             &direct_capable);
+    if (!result || !direct_capable)
         return VA_STATUS_ERROR_UNKNOWN;
 
-    if (!VA_NVCTRLGetClientDriverName(ctx->native_dpy, ctx->x11_screen,
-                                      drivers))
+    result = VA_NVCTRLGetClientDriverName(ctx->native_dpy, ctx->x11_screen,
+                                          &driver_major, &driver_minor,
+                                          &driver_patch, driver_name);
+    if (!result)
         return VA_STATUS_ERROR_UNKNOWN;
 
-    *num_drivers = 1;
     return VA_STATUS_SUCCESS;
 }
 

@@ -496,7 +496,6 @@ typedef struct _VAStatsStatisticsH264 {
     uint32_t    pixel_average_8x8[4];
 } VAStatsStatisticsH264;  // 64 bytes
 
-/**@}*/
 
 #ifdef __cplusplus
 }

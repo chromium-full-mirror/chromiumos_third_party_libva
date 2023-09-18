@@ -2,7 +2,6 @@
  * va_wayland_drm.c - Wayland/DRM helpers
  *
  * Copyright (c) 2012 Intel Corporation. All Rights Reserved.
- * Copyright (c) 2023 Emil Velikov
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the
@@ -125,15 +124,37 @@ static const struct wl_drm_listener drm_listener = {
 };
 
 static VAStatus
-va_DisplayContextGetDriverNames(
+va_DisplayContextGetNumCandidates(
     VADisplayContextP pDisplayContext,
-    char            **drivers,
-    unsigned         *num_drivers
+    int *candidate_index
 )
 {
     VADriverContextP const ctx = pDisplayContext->pDriverContext;
 
-    return VA_DRM_GetDriverNames(ctx, drivers, num_drivers);
+    return VA_DRM_GetNumCandidates(ctx, candidate_index);
+}
+
+static VAStatus
+va_DisplayContextGetDriverNameByIndex(
+    VADisplayContextP pDisplayContext,
+    char            **driver_name_ptr,
+    int             candidate_index
+)
+{
+    VADriverContextP const ctx = pDisplayContext->pDriverContext;
+
+    return VA_DRM_GetDriverName(ctx, driver_name_ptr, candidate_index);
+}
+
+static VAStatus
+va_DisplayContextGetDriverName(
+    VADisplayContextP pDisplayContext,
+    char            **driver_name_ptr
+)
+{
+    VADriverContextP const ctx = pDisplayContext->pDriverContext;
+
+    return VA_DRM_GetDriverName(ctx, driver_name_ptr, 0);
 }
 
 void
@@ -245,7 +266,9 @@ va_wayland_drm_create(VADisplayContextP pDisplayContext)
     wl_drm_ctx->registry                = NULL;
     wl_drm_ctx->is_authenticated        = 0;
     pDisplayContext->opaque             = wl_drm_ctx;
-    pDisplayContext->vaGetDriverNames    = va_DisplayContextGetDriverNames;
+    pDisplayContext->vaGetDriverName    = va_DisplayContextGetDriverName;
+    pDisplayContext->vaGetNumCandidates  = va_DisplayContextGetNumCandidates;
+    pDisplayContext->vaGetDriverNameByIndex = va_DisplayContextGetDriverNameByIndex;
 
     drm_state = calloc(1, sizeof(struct drm_state));
     if (!drm_state) {

@@ -31,10 +31,10 @@
 #include "va_backend.h"
 
 DLL_HIDDEN
-VAStatus va_FGLRX_GetDriverNames(
+VAStatus va_FGLRX_GetDriverName(
     VADisplayContextP pDisplayContext,
-    char **drivers,
-    unsigned *num_drivers
+    char **driver_name,
+    int candidate_index
 );
 
 #endif

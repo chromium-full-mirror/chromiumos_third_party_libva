@@ -687,14 +687,8 @@ struct VADisplayContext {
         int  candidate_index
     );
 
-    VAStatus(*vaGetDriverNames)(
-        VADisplayContextP ctx,
-        char **drivers,
-        unsigned *num_drivers
-    );
-
     /** \brief Reserved bytes for future use, must be zero */
-    unsigned long reserved[29];
+    unsigned long reserved[30];
 };
 
 typedef VAStatus(*VADriverInit)(

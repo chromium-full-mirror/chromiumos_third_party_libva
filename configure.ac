@@ -27,7 +27,7 @@
 # - reset micro version to zero when minor version is incremented
 # - reset minor version to zero when major version is incremented
 m4_define([va_api_major_version], [1])
-m4_define([va_api_minor_version], [19])
+m4_define([va_api_minor_version], [18])
 m4_define([va_api_micro_version], [0])
 
 m4_define([va_api_version],
@@ -43,7 +43,7 @@ m4_define([va_api_version],
 m4_define([libva_major_version], [m4_eval(va_api_major_version + 1)])
 m4_define([libva_minor_version], [m4_eval(va_api_minor_version)])
 m4_define([libva_micro_version], [0])
-m4_define([libva_pre_version],   [1])
+m4_define([libva_pre_version],   [0])
 
 m4_define([libva_version],
           [libva_major_version.libva_minor_version.libva_micro_version])
@@ -182,9 +182,6 @@ PKG_PROG_PKG_CONFIG
 
 AC_HEADER_STDC
 AC_SYS_LARGEFILE
-
-#check for secure_getenv
-AC_CHECK_FUNCS(secure_getenv)
 
 # Check for Doxygen
 if test "$enable_docs" = "yes"; then

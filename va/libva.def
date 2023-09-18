@@ -1,3 +1,4 @@
+LIBRARY va
 EXPORTS
     vaInitialize
     vaErrorStr
