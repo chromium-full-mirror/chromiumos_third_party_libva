@@ -37,16 +37,10 @@
 #include "va_backend.h"
 
 DLL_HIDDEN
-VAStatus va_DRI3_GetNumCandidates(
+VAStatus va_DRI3_GetDriverNames(
     VADisplayContextP pDisplayContext,
-    int *num_candidates
-);
-
-DLL_HIDDEN
-VAStatus va_DRI3_GetDriverName(
-    VADisplayContextP pDisplayContext,
-    char **driver_name_ptr,
-    int candidate_index
+    char **drivers,
+    unsigned *num_drivers
 );
 
 #endif
